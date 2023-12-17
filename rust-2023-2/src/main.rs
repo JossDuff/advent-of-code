@@ -1,15 +1,15 @@
-use std::fs::read_to_string;
+use std::{fs::read_to_string, u32::MAX};
 
 fn main() {
     let input = read_to_string("input.txt").unwrap();
 
-    let sum: u32 = input.lines().map(|line| determine_possibility(line)).sum();
+    let sum: u32 = input.lines().map(|line| obey_the_elf(line)).sum();
 
     println!("{sum}");
 }
 
 // parse into game and return the game number if it's possible
-fn determine_possibility(line: &str) -> u32 {
+fn obey_the_elf(line: &str) -> u32 {
     let mut input: Vec<&str> = line.split(";").collect();
     let game_header: &str = input
         .first()
@@ -50,11 +50,10 @@ fn determine_possibility(line: &str) -> u32 {
         game.cube_sets.push(cube_set);
     }
 
-    if game.is_possible() {
-        game.id
-    } else {
-        0
-    }
+    let min_bag = game.find_lowest_possible_bag();
+    // println!("{:?}", min_set);
+    let power = min_bag.power();
+    power
 }
 
 struct Game {
@@ -70,24 +69,43 @@ impl Game {
         }
     }
 
-    fn is_possible(&self) -> bool {
-        let max = CubeSet {
-            green: 13,
-            red: 12,
-            blue: 14,
+    // fn is_possible(&self) -> bool {
+    //     let max = CubeSet {
+    //         green: 13,
+    //         red: 12,
+    //         blue: 14,
+    //     };
+
+    //     for set in &self.cube_sets {
+    //         if set.green > max.green || set.red > max.red || set.blue > max.blue {
+    //             return false;
+    //         }
+    //     }
+
+    //     true
+    // }
+
+    fn find_lowest_possible_bag(&self) -> CubeSet {
+        let initial_max_values = CubeSet {
+            green: u32::MIN,
+            red: u32::MIN,
+            blue: u32::MIN,
         };
 
-        for set in &self.cube_sets {
-            if set.green > max.green || set.red > max.red || set.blue > max.blue {
-                return false;
-            }
-        }
+        let min_set = self
+            .cube_sets
+            .iter()
+            .fold(initial_max_values, |min_bag, cube_set| CubeSet {
+                green: min_bag.green.max(cube_set.green),
+                red: min_bag.red.max(cube_set.red),
+                blue: min_bag.blue.max(cube_set.blue),
+            });
 
-        true
+        min_set
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct CubeSet {
     green: u32,
     red: u32,
@@ -102,5 +120,23 @@ impl CubeSet {
             "blue" => self.blue = num,
             _ => panic!("unknown color: {color}"),
         }
+    }
+
+    fn power(&self) -> u32 {
+        self.green * self.red * self.blue
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn find_min_1() {
+        let line = "Game 1: 6 green, 3 blue; 3 red, 1 green; 4 green, 3 red, 5 blue";
+        let power = obey_the_elf(line);
+
+        let expected_power = 1 * 3 * 3;
+        assert_eq!(power, expected_power);
     }
 }
