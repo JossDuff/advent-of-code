@@ -2,68 +2,69 @@ use anyhow::Result;
 use std::{cmp::min, fs::read_to_string};
 
 fn main() {
-    let symbols = vec!['@', '#', '$', '%', '&', '*', '-', '+', '=', '/'];
+    // let symbols = vec!['@', '#', '$', '%', '&', '*', '-', '+', '=', '/'];
     let input = read_to_string("input.txt").unwrap();
     let lines: Vec<&str> = input.lines().collect();
 
-    let symbol_locations: Vec<SymbolLocation> = lines
+    let mut symbol_locations: Vec<SymbolLocation> = lines
         .iter()
         .enumerate()
         .flat_map(|(line_num, line)| {
             line.char_indices()
-                .filter(|(_, c)| symbols.contains(c))
-                .map(|(index, c)| SymbolLocation {
-                    symbol: c,
+                .filter(|(_, c)| *c == '*')
+                .map(|(index, _)| SymbolLocation {
                     line: line_num,
                     index,
+                    nums: vec![],
                 })
                 .collect::<Vec<SymbolLocation>>()
         })
         .collect();
 
     let mut sum: u32 = 0;
-    for location in &symbol_locations {
-        sum += check_above_and_below(location, &lines);
-        sum += check_adjacent(location, &lines);
+    for location in &mut symbol_locations {
+        check_above_and_below(location, &lines);
+        check_adjacent(location, &lines);
         // println!("{location:?}")
     }
+
+    let sum: u32 = symbol_locations
+        .iter()
+        .map(|location| {
+            if location.nums.len() == 2 {
+                location.nums[0] * location.nums[1]
+            } else {
+                0
+            }
+        })
+        .sum();
 
     println!("{sum}");
 }
 
 // will be tricky
-fn check_above_and_below(location: &SymbolLocation, lines: &Vec<&str>) -> u32 {
-    let mut sum: u32 = 0;
-
+fn check_above_and_below(location: &mut SymbolLocation, lines: &Vec<&str>) {
     // check above line
-    sum += if let Some(line) = lines.get(location.line + 1) {
-        check_above_and_below_impl(location, line)
-    } else {
-        0
+    if let Some(line) = lines.get(location.line + 1) {
+        check_above_and_below_impl(location, line);
     };
 
     // check below line
-    sum += if let Some(line) = lines.get(location.line - 1) {
-        check_above_and_below_impl(location, line)
-    } else {
-        0
+    if let Some(line) = lines.get(location.line - 1) {
+        check_above_and_below_impl(location, line);
     };
-
-    sum
 }
 
-fn check_above_and_below_impl(location: &SymbolLocation, line: &str) -> u32 {
+fn check_above_and_below_impl(location: &mut SymbolLocation, line: &str) {
     let dist_left = min(3, location.index);
     let dist_right = min(4, line.len() - location.index);
     let selection = &line[location.index - dist_left..location.index + dist_right];
     // print!("{selection} | ");
-    let sum = sum_above_or_below_selection(selection);
+    sum_above_or_below_selection(selection, location);
     // print!("{sum}\n");
-    sum
 }
 
-fn sum_above_or_below_selection(selection: &str) -> u32 {
-    let mut sum: u32 = 0;
+fn sum_above_or_below_selection(selection: &str, location: &mut SymbolLocation) {
     let mut curr_num = String::new();
     for (idx, c) in selection.chars().enumerate() {
         match c {
@@ -74,7 +75,7 @@ fn sum_above_or_below_selection(selection: &str) -> u32 {
             }
             _ => {
                 if !curr_num.is_empty() && idx != 1 && idx != 2 {
-                    sum += curr_num.parse::<u32>().unwrap()
+                    location.nums.push(curr_num.parse::<u32>().unwrap());
                 }
 
                 curr_num.clear()
@@ -83,13 +84,11 @@ fn sum_above_or_below_selection(selection: &str) -> u32 {
     }
 
     if !curr_num.is_empty() && curr_num.len() == 3 {
-        sum += curr_num.parse::<u32>().unwrap()
+        location.nums.push(curr_num.parse::<u32>().unwrap());
     }
-
-    sum
 }
 
-fn check_adjacent(location: &SymbolLocation, lines: &Vec<&str>) -> u32 {
+fn check_adjacent(location: &mut SymbolLocation, lines: &Vec<&str>) {
     // get line
     let line = lines[location.line];
     // get slice of index
@@ -145,15 +144,25 @@ fn check_adjacent(location: &SymbolLocation, lines: &Vec<&str>) -> u32 {
 
     // print!(" {num} \n");
 
-    num_left + num_right
+    if num_left > 0 {
+        location.nums.push(num_left)
+    }
+
+    if num_right > 0 {
+        location.nums.push(num_right)
+    }
 }
 
 #[derive(Debug)]
 struct SymbolLocation {
-    symbol: char,
     line: usize,
     index: usize,
+    nums: Vec<u32>,
 }
+
+/*
+
+Tests were for part 1
 
 #[cfg(test)]
 mod test {
@@ -239,3 +248,4 @@ mod test {
         assert_eq!(sum, expected_sum)
     }
 }
+*/
