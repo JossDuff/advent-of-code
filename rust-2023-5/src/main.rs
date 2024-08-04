@@ -1,4 +1,5 @@
 use anyhow::Result;
+use rayon::iter::{IntoParallelIterator, IntoParallelRefIterator, ParallelIterator};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 fn main() {
@@ -9,20 +10,22 @@ fn main() {
 }
 
 fn lowest_location(seeds: Vec<u64>, mappings: Vec<Vec<Mapping>>) -> u64 {
-    let mut locations: Vec<u64> = Vec::new();
-    for seed in seeds.iter() {
-        let mut source: u64 = *seed;
-        for category in mappings.iter() {
-            for map in category {
-                let destination = map.destination_of(source);
-                if let Some(destination) = destination {
-                    source = destination;
-                    break;
+    let locations: Vec<u64> = seeds
+        .into_par_iter()
+        .map(|seed| {
+            let mut source: u64 = seed;
+            for category in mappings.iter() {
+                for map in category {
+                    let destination = map.destination_of(source);
+                    if let Some(destination) = destination {
+                        source = destination;
+                        break;
+                    }
                 }
             }
-        }
-        locations.push(source)
-    }
+            source
+        })
+        .collect();
     *locations.iter().min().unwrap()
 }
 
@@ -47,12 +50,7 @@ fn parse_input(input_file: &str) -> Result<(Vec<u64>, Vec<Vec<Mapping>>)> {
     for (i, chunk) in chunks.iter().enumerate() {
         // println!("Chunk {}:", i + 1);
         if i == 0 {
-            let nums: Vec<&str> = chunk.split(' ').collect();
-            // skip the first "seeds:"
-            for num in nums.iter().skip(1) {
-                // println!("{num}");
-                seeds.push(num.parse::<u64>().unwrap())
-            }
+            seeds = parse_seeds(chunk);
             continue;
         }
 
@@ -74,7 +72,34 @@ fn parse_input(input_file: &str) -> Result<(Vec<u64>, Vec<Vec<Mapping>>)> {
 
         // println!("----------"); // Separator between chunks
     }
+    println!("parsed chunks");
     Ok((seeds, mappings))
+}
+
+fn parse_seeds(chunk: &&str) -> Vec<u64> {
+    let seeds: Vec<u64> = chunk
+        .split(' ')
+        .collect::<Vec<&str>>()
+        .iter()
+        .skip(1)
+        .map(|s| s.parse::<u64>().unwrap())
+        .collect::<Vec<u64>>()
+        .to_vec()
+        .chunks_exact(2)
+        .map(|chunk| {
+            let mut seeds = Vec::new();
+            // println!("chunk {chunk:?}");
+            let range = (chunk[0]..(chunk[0] + chunk[1])).collect::<Vec<u64>>();
+            // println!("range: {range:?}");
+            for seed in range {
+                seeds.push(seed);
+            }
+            seeds
+        })
+        .flatten()
+        .collect::<Vec<u64>>();
+    println!("parsed seeds");
+    seeds
 }
 
 struct Mapping {
@@ -101,7 +126,7 @@ impl Mapping {
 
 #[cfg(test)]
 mod tests {
-    use crate::Mapping;
+    use crate::{parse_seeds, Mapping};
 
     #[test]
     fn test_destination_mapping() {
@@ -115,5 +140,12 @@ mod tests {
         assert_eq!(m.destination_of(99), Some(51));
         assert_eq!(m.destination_of(100), None);
         assert_eq!(m.destination_of(97), None);
+    }
+
+    #[test]
+    fn test_seed_parsing() {
+        let starting_string = "seeds: 79 2 50 1";
+        let seeds = parse_seeds(&starting_string);
+        assert_eq!(seeds, [79, 80, 50])
     }
 }
