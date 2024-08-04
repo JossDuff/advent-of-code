@@ -76,6 +76,7 @@ fn parse_input(input_file: &str) -> Result<(Vec<u64>, Vec<Vec<Mapping>>)> {
     Ok((seeds, mappings))
 }
 
+// this is a worse approach but i just wanted to get done with this
 fn parse_seeds(chunk: &&str) -> Vec<u64> {
     let seeds: Vec<u64> = chunk
         .split(' ')
