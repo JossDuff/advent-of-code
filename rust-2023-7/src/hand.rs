@@ -106,12 +106,12 @@ impl FromStr for Hand {
 }
 #[derive(Eq, PartialEq, Debug)]
 pub enum Type {
-    FiveOfKind,  // only 1 card
-    FourOfKind,  // 2 cards
-    FullHouse,   // 2 cards
-    ThreeOfKind, // 3 cards
-    TwoPair,     // 3 cards
-    OnePair,     // 4 cards
+    FiveOfKind,  // only 1 card, or 2 cards with a joker
+    FourOfKind,  // 2 cards, or 3 cards with a joker
+    FullHouse,   // 2 cards, or 3 cards with a joker
+    ThreeOfKind, // 3 cards, or 4 cards with a joker
+    TwoPair,     // 3 cards, (a joker present would be ThreeOfKind)
+    OnePair,     // 4 cards, or 5 cards with a joker
     HighCard,    // 5 cards
 }
 
@@ -144,6 +144,7 @@ impl PartialOrd for Type {
 fn determine_type(hand_values: [u8; 5]) -> Type {
     // (card value, count)
     let mut unique_cards: Vec<(u8, u8)> = Vec::new();
+    let mut joker_count = 0;
 
     for val in hand_values.into_iter() {
         if let Some((_, count)) = unique_cards
@@ -154,30 +155,76 @@ fn determine_type(hand_values: [u8; 5]) -> Type {
         } else {
             unique_cards.push((val, 1));
         }
+
+        if val == 11 {
+            joker_count += 1;
+        }
     }
 
     match unique_cards.len() {
         1 => Type::FiveOfKind,
         2 => {
+            let joker_present = joker_count > 0;
             // 2 different cards can either be four of a kind with counts of 4 and 1
             // or full house with counts of 3 and 2
             if unique_cards[0].1 == 4 || unique_cards[0].1 == 1 {
-                Type::FourOfKind
+                if joker_present {
+                    Type::FiveOfKind
+                } else {
+                    Type::FourOfKind
+                }
+            } else if joker_present {
+                Type::FiveOfKind
             } else {
                 Type::FullHouse
             }
         }
         3 => {
-            // 3 different cards can either be three of a kind with counts of 3, 1, 1
+            // 3 different cards can either be
+            // three of a kind with counts of 3, 1, 1
+            // or four of kind with counts 3, 1, 1 and a joker with count 1 or 3
             // or two pair with counts 2, 2, 1
+            // or four of kind with counts 2, 2, 1 and a joker with count 2
+            // or Full house with 2, 2, 1 and a joker with count 1
             if unique_cards[0].1 == 3 || unique_cards[1].1 == 3 || unique_cards[2].1 == 3 {
-                Type::ThreeOfKind
+                // count 3, 1, 1
+                if joker_count > 0 {
+                    Type::FourOfKind
+                } else {
+                    Type::ThreeOfKind
+                }
+            } else if joker_count == 2 {
+                Type::FourOfKind
+            } else if joker_count == 1 {
+                Type::FullHouse
             } else {
                 Type::TwoPair
             }
         }
-        4 => Type::OnePair,
-        5 => Type::HighCard,
+
+        4 => {
+            let joker_present = joker_count > 0;
+            // 4 different cards can either be
+            // three of kind with 2, 1, 1, 1 and a joker present
+            // or one pair with no joker
+            if joker_present {
+                Type::ThreeOfKind
+            } else {
+                Type::OnePair
+            }
+        }
+        5 => {
+            // 5 different cards can either be
+            // One pair with a joker present
+            // or high card
+            let joker_present = joker_count > 0;
+            if joker_present {
+                Type::OnePair
+            } else {
+                Type::HighCard
+            }
+        }
+
         _ => panic!("invalid unique card length {}", unique_cards.len()),
     }
 }
@@ -188,12 +235,26 @@ mod tests {
 
     #[test]
     fn test_five_of_a_kind() {
-        assert_eq!(Type::FiveOfKind, determine_type([2; 5]))
+        assert_eq!(Type::FiveOfKind, determine_type([2; 5]));
+        let hand = [2, 2, 2, 2, 11];
+        assert_eq!(Type::FiveOfKind, determine_type(hand));
+        let hand = [2, 2, 2, 11, 11];
+        assert_eq!(Type::FiveOfKind, determine_type(hand));
+        let hand = [2, 2, 11, 11, 11];
+        assert_eq!(Type::FiveOfKind, determine_type(hand));
+        let hand = [2, 11, 11, 11, 11];
+        assert_eq!(Type::FiveOfKind, determine_type(hand));
     }
 
     #[test]
     fn test_four_of_a_kind() {
         let hand = [2, 2, 2, 2, 3];
+        assert_eq!(Type::FourOfKind, determine_type(hand));
+        let hand = [2, 2, 2, 11, 3];
+        assert_eq!(Type::FourOfKind, determine_type(hand));
+        let hand = [2, 2, 11, 11, 3];
+        assert_eq!(Type::FourOfKind, determine_type(hand));
+        let hand = [2, 11, 11, 11, 3];
         assert_eq!(Type::FourOfKind, determine_type(hand));
     }
 
@@ -201,11 +262,17 @@ mod tests {
     fn test_full_house() {
         let hand = [2, 2, 2, 3, 3];
         assert_eq!(Type::FullHouse, determine_type(hand));
+        let hand = [2, 2, 11, 3, 3];
+        assert_eq!(Type::FullHouse, determine_type(hand));
     }
 
     #[test]
     fn test_three_of_a_kind() {
         let hand = [2, 2, 2, 6, 3];
+        assert_eq!(Type::ThreeOfKind, determine_type(hand));
+        let hand = [2, 2, 11, 6, 3];
+        assert_eq!(Type::ThreeOfKind, determine_type(hand));
+        let hand = [2, 11, 11, 6, 3];
         assert_eq!(Type::ThreeOfKind, determine_type(hand));
     }
 
@@ -218,6 +285,8 @@ mod tests {
     #[test]
     fn test_one_pair() {
         let hand = [2, 7, 6, 3, 3];
+        assert_eq!(Type::OnePair, determine_type(hand));
+        let hand = [2, 7, 6, 11, 3];
         assert_eq!(Type::OnePair, determine_type(hand));
     }
 
@@ -246,12 +315,29 @@ mod tests {
 
     #[test]
     fn test_ordering_hand() {
-        let mut hands: Vec<Hand> = ["557T5", "A777A", "767Q6", "63J35", "TKKKK"]
+        let mut hands: Vec<Hand> = ["557T5", "A777A", "767Q6", "63K35", "TKKKK"]
             .iter()
             .map(|s| Hand::from_str(s).unwrap())
             .collect();
 
-        let mut ordered_hands: Vec<Hand> = ["TKKKK", "A777A", "557T5", "767Q6", "63J35"]
+        let mut ordered_hands: Vec<Hand> = ["TKKKK", "A777A", "557T5", "767Q6", "63K35"]
+            .iter()
+            .map(|s| Hand::from_str(s).unwrap())
+            .collect();
+
+        ordered_hands.reverse();
+        hands.sort();
+        assert_eq!(ordered_hands, hands);
+    }
+
+    #[test]
+    fn test_ordering_joker_hand() {
+        let mut hands: Vec<Hand> = ["557T5", "A77JA", "7J7Q6", "JKKKK", "TKKKK"]
+            .iter()
+            .map(|s| Hand::from_str(s).unwrap())
+            .collect();
+
+        let mut ordered_hands: Vec<Hand> = ["JKKKK", "TKKKK", "A77JA", "7J7Q6", "557T5"]
             .iter()
             .map(|s| Hand::from_str(s).unwrap())
             .collect();
