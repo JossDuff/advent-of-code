@@ -22,7 +22,7 @@ impl fmt::Display for Hand {
                 8 => "8",
                 9 => "9",
                 10 => "T",
-                11 => "J",
+                1 => "J",
                 12 => "Q",
                 13 => "K",
                 14 => "A",
@@ -86,7 +86,7 @@ impl FromStr for Hand {
                 '8' => 8,
                 '9' => 9,
                 'T' => 10,
-                'J' => 11,
+                'J' => 1,
                 'Q' => 12,
                 'K' => 13,
                 'A' => 14,
@@ -156,7 +156,7 @@ fn determine_type(hand_values: [u8; 5]) -> Type {
             unique_cards.push((val, 1));
         }
 
-        if val == 11 {
+        if val == 1 {
             joker_count += 1;
         }
     }
@@ -236,13 +236,13 @@ mod tests {
     #[test]
     fn test_five_of_a_kind() {
         assert_eq!(Type::FiveOfKind, determine_type([2; 5]));
-        let hand = [2, 2, 2, 2, 11];
+        let hand = [2, 2, 2, 2, 1];
         assert_eq!(Type::FiveOfKind, determine_type(hand));
-        let hand = [2, 2, 2, 11, 11];
+        let hand = [2, 2, 2, 1, 1];
         assert_eq!(Type::FiveOfKind, determine_type(hand));
-        let hand = [2, 2, 11, 11, 11];
+        let hand = [2, 2, 1, 1, 1];
         assert_eq!(Type::FiveOfKind, determine_type(hand));
-        let hand = [2, 11, 11, 11, 11];
+        let hand = [2, 1, 1, 1, 1];
         assert_eq!(Type::FiveOfKind, determine_type(hand));
     }
 
@@ -250,11 +250,11 @@ mod tests {
     fn test_four_of_a_kind() {
         let hand = [2, 2, 2, 2, 3];
         assert_eq!(Type::FourOfKind, determine_type(hand));
-        let hand = [2, 2, 2, 11, 3];
+        let hand = [2, 2, 2, 1, 3];
         assert_eq!(Type::FourOfKind, determine_type(hand));
-        let hand = [2, 2, 11, 11, 3];
+        let hand = [2, 2, 1, 1, 3];
         assert_eq!(Type::FourOfKind, determine_type(hand));
-        let hand = [2, 11, 11, 11, 3];
+        let hand = [2, 1, 1, 1, 3];
         assert_eq!(Type::FourOfKind, determine_type(hand));
     }
 
@@ -262,7 +262,7 @@ mod tests {
     fn test_full_house() {
         let hand = [2, 2, 2, 3, 3];
         assert_eq!(Type::FullHouse, determine_type(hand));
-        let hand = [2, 2, 11, 3, 3];
+        let hand = [2, 2, 1, 3, 3];
         assert_eq!(Type::FullHouse, determine_type(hand));
     }
 
@@ -270,9 +270,9 @@ mod tests {
     fn test_three_of_a_kind() {
         let hand = [2, 2, 2, 6, 3];
         assert_eq!(Type::ThreeOfKind, determine_type(hand));
-        let hand = [2, 2, 11, 6, 3];
+        let hand = [2, 2, 1, 6, 3];
         assert_eq!(Type::ThreeOfKind, determine_type(hand));
-        let hand = [2, 11, 11, 6, 3];
+        let hand = [2, 1, 1, 6, 3];
         assert_eq!(Type::ThreeOfKind, determine_type(hand));
     }
 
@@ -286,8 +286,20 @@ mod tests {
     fn test_one_pair() {
         let hand = [2, 7, 6, 3, 3];
         assert_eq!(Type::OnePair, determine_type(hand));
-        let hand = [2, 7, 6, 11, 3];
+        let hand = [2, 7, 6, 1, 3];
         assert_eq!(Type::OnePair, determine_type(hand));
+    }
+
+    #[test]
+    fn test_joker_hands() {
+        let hand = [1, 7, 6, 3, 3];
+        assert_eq!(Type::ThreeOfKind, determine_type(hand));
+        let hand = [2, 7, 6, 1, 3];
+        assert_eq!(Type::OnePair, determine_type(hand));
+        let hand = [1, 1, 6, 3, 3];
+        assert_eq!(Type::FourOfKind, determine_type(hand));
+        let hand = [1, 1, 1, 3, 3];
+        assert_eq!(Type::FiveOfKind, determine_type(hand));
     }
 
     #[test]
@@ -332,12 +344,12 @@ mod tests {
 
     #[test]
     fn test_ordering_joker_hand() {
-        let mut hands: Vec<Hand> = ["557T5", "A77JA", "7J7Q6", "JKKKK", "TKKKK"]
+        let mut hands: Vec<Hand> = ["557T5", "A77JA", "7J7Q6", "JKKKK", "TKKKK", "JJKK2"]
             .iter()
             .map(|s| Hand::from_str(s).unwrap())
             .collect();
 
-        let mut ordered_hands: Vec<Hand> = ["JKKKK", "TKKKK", "A77JA", "7J7Q6", "557T5"]
+        let mut ordered_hands: Vec<Hand> = ["JKKKK", "TKKKK", "JJKK2", "A77JA", "7J7Q6", "557T5"]
             .iter()
             .map(|s| Hand::from_str(s).unwrap())
             .collect();
