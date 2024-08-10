@@ -1,5 +1,6 @@
 use std::{cmp::Ordering, fmt, str::FromStr};
 
+#[derive(Debug)]
 pub struct Hand {
     hand_values: [u8; 5],
     hand_type: Type,
@@ -130,7 +131,7 @@ impl Type {
 
 impl Ord for Type {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.rank().cmp(&other.rank()).reverse() // reverse for greatest to least
+        self.rank().cmp(&other.rank()) // reverse for greatest to least
     }
 }
 
@@ -227,9 +228,35 @@ mod tests {
     }
 
     #[test]
-    fn test_ordering() {
-        let mut hands = vec!["557T5", "A777A", "363Q6", "63J35", "TKKKK"];
-        let ordered_hands = vec!["TKKKK", "A777A", "557T5", "363Q6", "63J35"];
+    fn test_ordering_type() {
+        assert!(Type::FiveOfKind > Type::FourOfKind);
+        assert!(Type::FourOfKind > Type::FullHouse);
+        assert!(Type::FullHouse > Type::ThreeOfKind);
+        assert!(Type::ThreeOfKind > Type::TwoPair);
+        assert!(Type::TwoPair > Type::OnePair);
+        assert!(Type::OnePair > Type::HighCard);
+    }
+
+    #[test]
+    fn test_ordering_single_hand() {
+        let hand = Hand::from_str("557T5");
+        let hand_2 = Hand::from_str("767Q6");
+        assert_eq!(Ordering::Greater, hand.cmp(&hand_2));
+    }
+
+    #[test]
+    fn test_ordering_hand() {
+        let mut hands: Vec<Hand> = ["557T5", "A777A", "767Q6", "63J35", "TKKKK"]
+            .iter()
+            .map(|s| Hand::from_str(s).unwrap())
+            .collect();
+
+        let mut ordered_hands: Vec<Hand> = ["TKKKK", "A777A", "557T5", "767Q6", "63J35"]
+            .iter()
+            .map(|s| Hand::from_str(s).unwrap())
+            .collect();
+
+        ordered_hands.reverse();
         hands.sort();
         assert_eq!(ordered_hands, hands);
     }
