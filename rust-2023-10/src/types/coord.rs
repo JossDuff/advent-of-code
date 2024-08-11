@@ -8,14 +8,14 @@ impl Coord {
     pub fn north(&self) -> Self {
         Self {
             x: self.x,
-            y: self.y + 1,
+            y: self.y - 1,
         }
     }
 
     pub fn south(&self) -> Self {
         Self {
             x: self.x,
-            y: self.y - 1,
+            y: self.y + 1,
         }
     }
 

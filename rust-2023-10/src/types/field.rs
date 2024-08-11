@@ -6,10 +6,10 @@ pub struct Field(pub Vec<Vec<Pipe>>);
 impl Field {
     pub fn find_the_animal(&self) -> Coord {
         let mut coord = Coord { x: 0, y: 0 };
-        for (x, line) in self.0.iter().enumerate() {
-            for (y, pipe) in line.iter().enumerate() {
+        for (y, line) in self.0.iter().enumerate() {
+            for (x, pipe) in line.iter().enumerate() {
                 if let Pipe::Animal = pipe {
-                    coord = Coord { x, y };
+                    coord = Coord { x: x, y: y };
                 }
             }
         }
@@ -17,11 +17,12 @@ impl Field {
     }
 
     pub fn at(&self, loc: &Coord) -> &Pipe {
-        &self.0[loc.x][loc.y]
+        &self.0[loc.y][loc.x]
     }
 
     // this definitely doesn't need to be in Field
     pub fn next(&self, prev_loc: Coord, curr_loc: Coord) -> Coord {
+        // println!("next(prev:{:?}, curr: {:?})", prev_loc, curr_loc);
         let curr_pipe = self.at(&curr_loc);
 
         match curr_pipe {
