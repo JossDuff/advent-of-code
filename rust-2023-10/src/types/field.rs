@@ -4,11 +4,24 @@ use crate::types::{coord::Coord, pipe::Pipe};
 pub struct Field(pub Vec<Vec<Pipe>>);
 
 impl Field {
-    fn at(&self, loc: &Coord) -> &Pipe {
+    pub fn find_the_animal(&self) -> Coord {
+        let mut coord = Coord { x: 0, y: 0 };
+        for (x, line) in self.0.iter().enumerate() {
+            for (y, pipe) in line.iter().enumerate() {
+                if let Pipe::Animal = pipe {
+                    coord = Coord { x, y };
+                }
+            }
+        }
+        coord
+    }
+
+    pub fn at(&self, loc: &Coord) -> &Pipe {
         &self.0[loc.x][loc.y]
     }
 
-    fn next(&self, prev_loc: Coord, curr_loc: Coord) -> Coord {
+    // this definitely doesn't need to be in Field
+    pub fn next(&self, prev_loc: Coord, curr_loc: Coord) -> Coord {
         let curr_pipe = self.at(&curr_loc);
 
         match curr_pipe {

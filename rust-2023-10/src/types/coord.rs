@@ -1,4 +1,4 @@
-#[derive(Eq, PartialEq)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct Coord {
     pub x: usize,
     pub y: usize,
